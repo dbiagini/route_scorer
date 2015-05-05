@@ -46,7 +46,7 @@
 
 	      var polyline = new google.maps.Polyline({
 		      path: [],
-		      strokeColor: '#FF0000',
+		      strokeColor: '#00FF00',
 		      strokeWeight: 3
 	      });
 	
@@ -122,10 +122,12 @@
                     })(i));
                   }
 	          //Handle the Summary Marker//
+		  var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
 	          var endMarker = new google.maps.Marker({
                    position: path[path.length-1],
                    map: map,
-                   title: 'Final Mark %'+ExMark
+                   title: 'Final Mark %'+ExMark,
+		   icon: iconBase + 'flag_maps.png'
                   });
 	          var summaryString = '<div id="content">'+
 				      'Final Excitment Mark ='+ExMark.toFixed(2)+'%'+
