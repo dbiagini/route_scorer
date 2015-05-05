@@ -98,6 +98,7 @@
                                
                               var tempHead = Math.abs(heading-prevHeading);
                               if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
+			      headingArray[headingArray.length] = tempHead;
 			      HeadVar += tempHead;
                               segLenght = google.maps.geometry.spherical.computeDistanceBetween(prevSegment, nextSegment[k]);
                             } 
@@ -108,7 +109,7 @@
                           polyline[p].getPath().push(nextSegment[k]);
                           bounds.extend(nextSegment[k]);
                           myLatlng = nextSegment[k];
-			  headingArray[headingArray.length] = heading;
+			  //headingArray[headingArray.length] = heading;
                        
 		          if(TotsegLenght>=5000){
 		                markers[p] = new google.maps.Marker({
@@ -152,8 +153,8 @@
 		  var legend = document.createElement('div');
 		  legend.id = 'legend';
 		  var content = [];
-		  for(i=0;i<headingArray.length;i++){
-		  	content.push('<p><div class="legend"></div>H ='+headingArray[i]+'</p>');
+		  for(i=0;i<10/*headingArray.length*/;i++){
+		  	content.push('<p><div class="legend"></div>H'+i+' ='+headingArray[i]+'</p>');
 		  }
 		  legend.innerHTML = content.join('');
 		  legend.index = 1;
