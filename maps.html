@@ -40,7 +40,7 @@
                         var path = result.routes[0].overview_path;
                         var legs = result.routes[0].legs;
                         myLatlng = elaborateRoute(map, legs,polyline,
-                            bounds, markers, contentStrings, 0);
+                            bounds, markers, contentStrings, 1);
                         //inject the final marker
                         var markerImage = new
                             google.maps.MarkerImage('destIcon.png',
@@ -77,6 +77,7 @@
         function elaborateRoute(map, legs, polyline, bounds,  markers,
                 contentStrings, alg){
             if(alg==0) return elaborateDH(map, legs, polyline, bounds, markers, contentStrings);
+            else if(alg==1) return elaborateNumSections(map, legs, polyline, bounds,  markers, contentStrings);
         }
         function elaborateDH(map, legs, polyline, bounds,  markers, contentStrings){
             var finalPos=0;
@@ -119,6 +120,46 @@
                         '</div>';
                 }
             }
+            return finalPos;
+        }
+        function elaborateNumSections(map, legs, polyline, bounds,  markers, contentStrings){
+            var finalPos=0;
+            var nSections=0;
+            var numSegmentsSec=0;
+            for (i=0;i<legs.length;i++) {
+                var steps = legs[i].steps;
+                for (j=0;j<steps.length;j++) {
+                    var nextSegment = steps[j].path;
+                    var heading =0;
+                    var TotSeclength =0;
+                    var HeadVar =0;
+                    var StartPoint = nextSegment[0];
+                    var prevHeading =256;
+                    var segLenght =0;
+
+                    for (k=0;k<nextSegment.length;k++) {
+                        if(k>=1) segLenght = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
+                        TotSeclength+=segLenght;
+                        polyline.getPath().push(nextSegment[k]);
+                        bounds.extend(nextSegment[k]);
+                        numSegmentsSec++;
+                        finalPos = nextSegment[k];
+                        //don't add the final marker
+                        if(TotSeclength>= 5000){ 
+                            markers[nSections] = new google.maps.Marker({
+                            position: finalPos,
+                            map: map,
+                            });
+                            contentStrings[nSections] = '<div id="content">'+'Section='+nSections+'TotLenght='+TotSeclength.toFixed(2)+'Mark='+numSegmentsSec+'%'+'</div>';
+                            numSegmentsSec = 0; //reset number of segments
+                            TotSeclength = 0;
+                            nSections++;
+                        }
+                    }
+                    
+                }
+            }
+            window.alert("TotNumberSections = "+nSections+" FinalPos="+finalPos);
             return finalPos;
         }
         </script>
