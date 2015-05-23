@@ -67,10 +67,10 @@
                                     bounds.extend(nextSegment[k]);
                                     myLatlng = nextSegment[k];
                                 }
-                                markers[j] = new google.maps.Marker({
+                                //don't add the final marker
+                                if(j<steps.length-1) markers[j] = new google.maps.Marker({
                                     position: myLatlng,
                                     map: map,
-                                    title: 'Uluru (Ayers Rock)'
                                 });
                                 var DHeadN = HeadVar/TotsegLenght * 100;
                                 contentStrings[j] = '<div id="content">'+
@@ -78,6 +78,18 @@
                                     '</div>';
                             }
                         }
+                        //inject the final marker
+                        var markerImage = new
+                            google.maps.MarkerImage('destIcon.png',
+                                    new google.maps.Size(50, 51), null,
+                                    new google.maps.Point(50, 50));
+                        markers[markers.length]= new google.maps.Marker({
+                                position: myLatlng,
+                                map: map,
+                                title: 'destination',
+                                icon: markerImage
+                            })
+
                         polyline.setMap(map);
                         map.fitBounds(bounds);
                         for (i=0;i<markers.length;i++) {
