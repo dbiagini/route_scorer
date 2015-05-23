@@ -39,45 +39,8 @@
                         var bounds = new google.maps.LatLngBounds();
                         var path = result.routes[0].overview_path;
                         var legs = result.routes[0].legs;
-                        for (i=0;i<legs.length;i++) {
-                            var steps = legs[i].steps;
-                            for (j=0;j<steps.length;j++) {
-                                var nextSegment = steps[j].path;
-                                var heading =0;
-                                var TotsegLenght =0;
-                                var HeadVar =0;
-                                var StartPoint = nextSegment[0];
-                                var prevHeading =256;
-                                var segLenght =0;
-
-                                for (k=0;k<nextSegment.length;k++) {
-                                    if(k>=1) {
-                                    heading = google.maps.geometry.spherical.computeHeading(nextSegment[k-1], nextSegment[k]);
-                                    if(prevHeading!=256){
-                                        var tempHead = Math.abs(heading-prevHeading);
-                                        if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
-                                        HeadVar += tempHead;
-                                        segLenght = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
-                                    }
-                                    TotsegLenght+=segLenght;
-                                    //window.alert("Heading = "+heading+" Lenght ="+segLenght);
-                                      prevHeading = heading;
-                                    }
-                                    polyline.getPath().push(nextSegment[k]);
-                                    bounds.extend(nextSegment[k]);
-                                    myLatlng = nextSegment[k];
-                                }
-                                //don't add the final marker
-                                if(j<steps.length-1) markers[j] = new google.maps.Marker({
-                                    position: myLatlng,
-                                    map: map,
-                                });
-                                var DHeadN = HeadVar/TotsegLenght * 100;
-                                contentStrings[j] = '<div id="content">'+
-                                    'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLenght.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+
-                                    '</div>';
-                            }
-                        }
+                        myLatlng = elaborateRoute(map, legs,polyline,
+                            bounds, markers, contentStrings, 0);
                         //inject the final marker
                         var markerImage = new
                             google.maps.MarkerImage('destIcon.png',
@@ -106,6 +69,58 @@
                     }
                 });
             }
+        //function to elaborate the route received//
+        // in: map, legs, polyline, bounds, algorythm
+        // out: markers, contentStrings
+        // return value = final position
+
+        function elaborateRoute(map, legs, polyline, bounds,  markers,
+                contentStrings, alg){
+            if(alg==0) return elaborateDH(map, legs, polyline, bounds, markers, contentStrings);
+        }
+        function elaborateDH(map, legs, polyline, bounds,  markers, contentStrings){
+            var finalPos=0;
+            for (i=0;i<legs.length;i++) {
+                var steps = legs[i].steps;
+                for (j=0;j<steps.length;j++) {
+                    var nextSegment = steps[j].path;
+                    var heading =0;
+                    var TotsegLenght =0;
+                    var HeadVar =0;
+                    var StartPoint = nextSegment[0];
+                    var prevHeading =256;
+                    var segLenght =0;
+
+                    for (k=0;k<nextSegment.length;k++) {
+                        if(k>=1) {
+                        heading = google.maps.geometry.spherical.computeHeading(nextSegment[k-1], nextSegment[k]);
+                        if(prevHeading!=256){
+                            var tempHead = Math.abs(heading-prevHeading);
+                            if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
+                            HeadVar += tempHead;
+                            segLenght = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
+                        }
+                        TotsegLenght+=segLenght;
+                        //window.alert("Heading = "+heading+" Lenght ="+segLenght);
+                          prevHeading = heading;
+                        }
+                        polyline.getPath().push(nextSegment[k]);
+                        bounds.extend(nextSegment[k]);
+                        finalPos = nextSegment[k];
+                    }
+                    //don't add the final marker
+                    if(j<steps.length-1) markers[j] = new google.maps.Marker({
+                        position: finalPos,
+                        map: map,
+                    });
+                    var DHeadN = HeadVar/TotsegLenght * 100;
+                    contentStrings[j] = '<div id="content">'+
+                        'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLenght.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+
+                        '</div>';
+                }
+            }
+            return finalPos;
+        }
         </script>
 
         <style type="text/css">
