@@ -4,6 +4,7 @@
         <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
         <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
         <title>Google Maps API (v3): polyline from directions</title>
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
         <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
         <style type="text/css">
 		  #legend {
@@ -17,10 +18,10 @@
         var directionsService;
         var request;
         var geocoder;
+        var data;
 
         function initialize() {
             var center = new google.maps.LatLng(52.229676, 21.012229);
-            var myLatlng = 0;
             geocoder = new google.maps.Geocoder();
             directionsService = new google.maps.DirectionsService(); 
               map = new google.maps.Map(document.getElementById('map_canvas'), {
@@ -68,7 +69,10 @@
 		        strokeWeight: 3,
 		        map: map
             });
-           
+            data = new google.visualization.DataTable();
+            data.addColumn('string', 'interval');
+            data.addColumn('number', 'Excitement value');
+                       
             directionsService.route(request, function(result, status) {
                 if (status == google.maps.DirectionsStatus.OK) {
                     var bounds = new google.maps.LatLngBounds();
@@ -92,6 +96,8 @@
                     var content = [];
                     for(i=0;i<10/*headingArray.length*/;i++){
                         content.push('<p><div class="legend"></div>H'+i+'='+totExcitement[i]+'</p>');
+                        data.addRow(['T'+i, totExcitement[i]]);
+                        //window.alert("Table Add row= "+data.getValue((data.getNumberOfRows()-1), 2));
                     }
                     legend.innerHTML = content.join('');
                     legend.index = 1;
@@ -119,8 +125,11 @@
                           infowindows[i].open(map,markers[i]);
                         }
                       })(i));
+
                     }
 
+                    //window.alert("Table rows= "+data.getNumberOfRows());
+                    drawChart();
                 }
             });
         }
@@ -137,7 +146,6 @@
                     polyline, bounds,  markers, contentStrings, totExcitement);
         }
         function elaborateDH(map, legs, polyline, bounds,  markers, contentStrings, totExcitement){
-            var finalPos=0;
             /*for (i=0;i<legs.length;i++) {
                 var steps = legs[i].steps;
                 for (j=0;j<steps.length;j++) {
@@ -188,6 +196,7 @@
             var bendsNumb = 0;
             var bendDirection =0;
             var bendDetection =0;
+            var myPosition =0;
             for (i=0;i<legs.length;i++) {
                 var steps = legs[i].steps;
                 for (j=0;j<steps.length;j++) {
@@ -209,12 +218,12 @@
                         prevSegment = nextSegment[k];
                         polyline[p].getPath().push(nextSegment[k]);
                         bounds.extend(nextSegment[k]);
-                        myLatlng = nextSegment[k];
+                        myPosition = nextSegment[k];
                         //headingArray[headingArray.length] = heading;
                
                         if(TotsegLenght>=5000){
                             markers[p] = new google.maps.Marker({
-                              position: myLatlng,
+                              position: myPosition,
                               map: map,
                               title: 'T'+p
                             });
@@ -238,7 +247,7 @@
                     }
                 }
             }
-            return finalPos;
+            return myPosition;
         }
         //function to assign different colors to each part of the
         //polyline
@@ -333,25 +342,16 @@
       _uacct = "UA-162157-1";
       urchinTracker();
       </script>	
-      <script type="text/javascript" src="https://www.google.com/jsapi"></script>
       <script type="text/javascript">
-            google.load('visualization', '1', {packages: ['corechart','bar']});
-            google.setOnLoadCallback(drawChart);
-            function drawChart() {
-                    var data = new google.visualization.DataTable();
-                    data.addColumn('string', 'interval');
-                    data.addColumn('number', 'Excitement value');
-                    data.addRows([
-                            ['t0', 1],
-                            ['t1', 2],
-                            ]);
-                    // Set chart options
-                    var options = {'title':'Motivation',
-                        'width':400,'height':300, 'backgroundColor':
-                        {fill:'transparent' }};
-                    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-                    chart.draw(data, options);
-            }
+        google.load('visualization', '1', {packages: ['corechart','bar']});
+        function drawChart() {
+                // Set chart options
+                var options = {'title':'Motivation',
+                    'width':400,'height':300, 'backgroundColor':
+                    {fill:'transparent' }};
+                var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+                chart.draw(data, options);
+        }
       </script>
       <div id="chart_div" style="position: absolute; z-index: 10;
           top:600px; left:1300px;"><div>
