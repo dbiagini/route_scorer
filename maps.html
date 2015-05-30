@@ -29,6 +29,10 @@
                 zoom: 13,
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             });
+            data = new google.visualization.DataTable();
+            data.addColumn('string', 'interval');
+            data.addColumn('number', 'Excitement value');
+
         }
         function getColour(value){
             var outcolor = '#000000'; //White
@@ -69,10 +73,7 @@
 		        strokeWeight: 3,
 		        map: map
             });
-            data = new google.visualization.DataTable();
-            data.addColumn('string', 'interval');
-            data.addColumn('number', 'Excitement value');
-                       
+                                   
             directionsService.route(request, function(result, status) {
                 if (status == google.maps.DirectionsStatus.OK) {
                     var bounds = new google.maps.LatLngBounds();
@@ -94,7 +95,7 @@
                     var legend = document.createElement('div');
                     legend.id = 'legend';
                     var content = [];
-                    for(i=0;i<10/*headingArray.length*/;i++){
+                    for(i=0;i<30/*headingArray.length*/;i++){
                         content.push('<p><div class="legend"></div>H'+i+'='+totExcitement[i]+'</p>');
                         data.addRow(['T'+i, totExcitement[i]]);
                         //window.alert("Table Add row= "+data.getValue((data.getNumberOfRows()-1), 2));
@@ -151,11 +152,11 @@
                 for (j=0;j<steps.length;j++) {
                     var nextSegment = steps[j].path;
                     var heading =0;
-                    var TotsegLenght =0;
+                    var TotsegLength =0;
                     var HeadVar =0;
                     var StartPoint = nextSegment[0];
                     var prevHeading =256;
-                    var segLenght =0;
+                    var segLength =0;
 
                     for (k=0;k<nextSegment.length;k++) {
                         if(k>=1) {
@@ -164,10 +165,10 @@
                             var tempHead = Math.abs(heading-prevHeading);
                             if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
                             HeadVar += tempHead;
-                            segLenght = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
+                            segLength = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
                         }
-                        TotsegLenght+=segLenght;
-                        //window.alert("Heading = "+heading+" Lenght ="+segLenght);
+                        TotsegLength+=segLength;
+                        //window.alert("Heading = "+heading+" Lenght ="+segLength);
                           prevHeading = heading;
                         }
                         polyline.getPath().push(nextSegment[k]);
@@ -179,61 +180,114 @@
                         position: finalPos,
                         map: map,
                     });
-                    var DHeadN = HeadVar/TotsegLenght * 100;
+                    var DHeadN = HeadVar/TotsegLength * 100;
                     contentStrings[j] = '<div id="content">'+
-                        'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLenght.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+
+                        'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+
                         '</div>';
                 }
             }*/
 
-            var TotsegLenght =0;
+            var TotsegLength =0;
             var HeadVar =0;
             var p = 0;
             var prevHeading =256;
             var heading = 0;
             var headingArray = [];
             var prevSegment = 0;	
-            var bendsNumb = 0;
+            var bendsNumSeg = 0;
             var bendDirection =0;
             var bendDetection =0;
+            var exitBend = 2; //check the last 3 segments 
+            var bendLengths = [];
+            var bendHeadBuffer= [];
+            var bendLengthBuffer= [];
             var myPosition =0;
+            var bendLength =0;
+
+            //debug vars//
+            var totLegs = legs.length;
+            var totSteps =0;
+            var totSegs =0;
+
             for (i=0;i<legs.length;i++) {
                 var steps = legs[i].steps;
+                totSteps += steps.length;
                 for (j=0;j<steps.length;j++) {
-                    var nextSegment = steps[j].path;                 
+                    var nextSegment = steps[j].path;
+                    totSegs +=nextSegment.length;
                     for (k=0;k<nextSegment.length;k++) {
-                        var segLenght =0;
+                        var segLength =0;
                         if(!((k==0)&&(i==0)&&(j==0))) { 
                             heading = google.maps.geometry.spherical.computeHeading(prevSegment, nextSegment[k]);
                             if(prevHeading!=256){
                                 var tempHead = Math.abs(heading-prevHeading);
+                                if(!tempHead) tempHead = 0;
                                 if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
                                 headingArray[headingArray.length] = tempHead;
                                 HeadVar += tempHead;
-                                segLenght = google.maps.geometry.spherical.computeDistanceBetween(prevSegment, nextSegment[k]);
+                                segLength = google.maps.geometry.spherical.computeDistanceBetween(prevSegment, nextSegment[k]);
+                                if((tempHead/segLength) > 0.5){
+                                    bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
+                                    bendLengthBuffer[bendLengthBuffer.length] = segLength;
+                                    headingArray[headingArray.length-1] = 100; //trick for the color
+                                    if(bendDetection==0) {
+                                        bendDetection=1;
+                                        //window.alert("Bend start, perc="+(tempHead/segLength));
+                                    }else{ 
+                                        //window.alert("Bend Continue, perc="+(tempHead/segLength));
+                                        exitBend=2; //reset exit
+                                    }
+                                }else{
+                                    if(bendDetection==1){ 
+                                        if(exitBend){
+                                            exitBend--; //decrement
+                                            bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
+                                            bendLengthBuffer[bendLengthBuffer.length] = segLength;
+                                            headingArray[headingArray.length-1] = 100; //trick for the color
+                                           // window.alert("Bend Continue, exit="+exitBend);
+                                        }else{
+                                            //end of Bend
+                                            bendDetection =0;
+                                            for(s=0; s<bendLengthBuffer.length; s++){
+                                                bendLength += bendLengthBuffer[s];
+                                            }
+                                            bendLengths[bendLengths.length] = bendLength;
+                                            bendLength=0;
+                                            bendsNumSeg++; //increment the number of detected bends in this segment
+                                            //window.alert("Bend Detected, lenght="+bendLengths[bendLengths.length-1]);
+                                            
+                                            //clear bendBuffers scary javascript
+                                            bendHeadBuffer = [];
+                                            bendLengthBuffer = [];
+                                            exitBend = 2;
+                                        }
+                                    }
+                                }
                             } 
                             prevHeading = heading;
                         } 
-                        TotsegLenght+=segLenght;
+                        TotsegLength+=segLength;
                         prevSegment = nextSegment[k];
                         polyline[p].getPath().push(nextSegment[k]);
                         bounds.extend(nextSegment[k]);
                         myPosition = nextSegment[k];
                         //headingArray[headingArray.length] = heading;
                
-                        if(TotsegLenght>=5000){
+                        if(TotsegLength>=2000){
                             markers[p] = new google.maps.Marker({
                               position: myPosition,
                               map: map,
                               title: 'T'+p
                             });
-                            var DHeadN = HeadVar/TotsegLenght * 100;
-                            totExcitement[p]= DHeadN;
-                            contentStrings[p] = '<div id="content">'+'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLenght.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+'</div>';
+                            var DHeadN = HeadVar/TotsegLength * 100;
+                            totExcitement[p]= (bendsNumSeg/TotsegLength)
+                                *37500;
+                            contentStrings[p] = '<div id="content">'+'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+'</div>';
                            
                             p++;
                             HeadVar = 0; //reset counters
-                            TotsegLenght = 0;
+                            TotsegLength = 0;
+                            bendsNumSeg = 0;
                             ///create a new polyline////
                             polyline[p]= new google.maps.Polyline({
                             path: [],
@@ -244,9 +298,36 @@
                             polyline[p].getPath().push(nextSegment[k]);
                             //init new polyline where the previous ended.
                         }
+                            /*markers[p] = new google.maps.Marker({
+                              position: myPosition,
+                              map: map,
+                              title: 'T'+p
+                            });
+                            var DHeadN = HeadVar/TotsegLength * 100;
+                            if(headingArray.length > 1) totExcitement[p]= headingArray[headingArray.length-1];
+                            else totExcitement[p] = 0;
+                            contentStrings[p] = '<div id="content">'+'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+totExcitement[p]+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+'</div>';
+                           
+                            p++;
+                            HeadVar = 0; //reset counters
+                            TotsegLength = 0;
+                            ///create a new polyline////
+                            polyline[p]= new google.maps.Polyline({
+                            path: [],
+                            strokeColor: '#00FF00',
+                            strokeWeight: 3,
+                            map: map
+                            });
+                            polyline[p].getPath().push(nextSegment[k]);
+                            //init new polyline where the previous ended.
+                            */
+
                     }
                 }
             }
+
+            window.alert("Bends Detected="+bendLengths.length);
+            window.alert("legs= "+totLegs+"steps= "+totSteps+"segments="+totSegs);
             return myPosition;
         }
         //function to assign different colors to each part of the
@@ -254,6 +335,7 @@
         // in : polyline
         // totExcitement: Values correpondent to each segment of
         // polyline
+        
         function setMultplePolylineColor(polyline, totExcitement){
             for(i=0; i<polyline.length; i++){
                 ////set colour vaue in previous polyline///
@@ -276,11 +358,11 @@
                     var HeadVar =0;
                     var StartPoint = nextSegment[0];
                     var prevHeading =256;
-                    var segLenght =0;
+                    var segLength =0;
 
                     for (k=0;k<nextSegment.length;k++) {
-                        if(k>=1) segLenght = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
-                        TotSeclength+=segLenght;
+                        if(k>=1) segLength = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
+                        TotSeclength+=segLength;
                         polyline[nSections].getPath().push(nextSegment[k]);
                         bounds.extend(nextSegment[k]);
                         numSegmentsSec++;
@@ -323,8 +405,12 @@
     </head>
     <body onload="initialize()">
       <div id="panel">
-        <input id="address0" type="textbox" value="Warsaw, Poland">
-        <input id="address1" type="textbox" value="Radom, Poland">
+       <!-- <input id="address0" type="textbox" value="Al. Marszałka Józefa Piłsudskiego 50 Marki, Poland">
+        <input id="address1" type="textbox" value="Al. Marszałka Józefa
+        Piłsudskiego 24 Marki, Poland">-->
+        <input id="address0" type="textbox" value="Pod Skałką 15 34-443 Sromowce Wyżne, Poland">
+        <input id="address1" type="textbox" value="49.434514, 20.346163"> 
+
         <select id="algorythm">
             <option value="0">Alg-1</option>
             <option value="1">Alg-2</option>
