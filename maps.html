@@ -145,48 +145,11 @@
                     markers, contentStrings, totExcitement);
             else if(alg==1) return elaborateNumSections(map, legs,
                     polyline, bounds,  markers, contentStrings, totExcitement);
+            else if(alg==2) return elaborateBbyB(map, legs,
+                    polyline, bounds,  markers, contentStrings, totExcitement);
+
         }
         function elaborateDH(map, legs, polyline, bounds,  markers, contentStrings, totExcitement){
-            /*for (i=0;i<legs.length;i++) {
-                var steps = legs[i].steps;
-                for (j=0;j<steps.length;j++) {
-                    var nextSegment = steps[j].path;
-                    var heading =0;
-                    var TotsegLength =0;
-                    var HeadVar =0;
-                    var StartPoint = nextSegment[0];
-                    var prevHeading =256;
-                    var segLength =0;
-
-                    for (k=0;k<nextSegment.length;k++) {
-                        if(k>=1) {
-                        heading = google.maps.geometry.spherical.computeHeading(nextSegment[k-1], nextSegment[k]);
-                        if(prevHeading!=256){
-                            var tempHead = Math.abs(heading-prevHeading);
-                            if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
-                            HeadVar += tempHead;
-                            segLength = google.maps.geometry.spherical.computeDistanceBetween(nextSegment[k-1], nextSegment[k]);
-                        }
-                        TotsegLength+=segLength;
-                        //window.alert("Heading = "+heading+" Lenght ="+segLength);
-                          prevHeading = heading;
-                        }
-                        polyline.getPath().push(nextSegment[k]);
-                        bounds.extend(nextSegment[k]);
-                        finalPos = nextSegment[k];
-                    }
-                    //don't add the final marker
-                    if(j<steps.length-1) markers[j] = new google.maps.Marker({
-                        position: finalPos,
-                        map: map,
-                    });
-                    var DHeadN = HeadVar/TotsegLength * 100;
-                    contentStrings[j] = '<div id="content">'+
-                        'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+
-                        '</div>';
-                }
-            }*/
-
             var TotsegLength =0;
             var HeadVar =0;
             var p = 0;
@@ -197,17 +160,20 @@
             var bendsNumSeg = 0;
             var bendDirection =0;
             var bendDetection =0;
-            var exitBend = 2; //check the last 3 segments 
+            var exitLength = 50; //max lenght without variation of heading
             var bendLengths = [];
             var bendHeadBuffer= [];
+            var bendDHead= [];
             var bendLengthBuffer= [];
             var myPosition =0;
             var bendLength =0;
+            var bendDirection=0;
 
             //debug vars//
             var totLegs = legs.length;
             var totSteps =0;
             var totSegs =0;
+            var headingTemp =0
 
             for (i=0;i<legs.length;i++) {
                 var steps = legs[i].steps;
@@ -220,38 +186,55 @@
                         if(!((k==0)&&(i==0)&&(j==0))) { 
                             heading = google.maps.geometry.spherical.computeHeading(prevSegment, nextSegment[k]);
                             if(prevHeading!=256){
-                                var tempHead = Math.abs(heading-prevHeading);
+                                var tempHead = heading-prevHeading;
                                 if(!tempHead) tempHead = 0;
-                                if(tempHead > 180) tempHead = Math.abs(HeadVar-360);
-                                headingArray[headingArray.length] = tempHead;
+                                if(tempHead > 180) tempHead = 360-HeadVar;
+                                if(tempHead < -180) tempHead =
+                                    -360-HeadVar; //negative angle keep direction of turning
                                 HeadVar += tempHead;
+                                headingTemp=tempHead;
                                 segLength = google.maps.geometry.spherical.computeDistanceBetween(prevSegment, nextSegment[k]);
-                                if((tempHead/segLength) > 0.5){
+                                if((Math.abs(tempHead/segLength) > 0.3) && (exitLength >= 0)){
                                     bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
                                     bendLengthBuffer[bendLengthBuffer.length] = segLength;
-                                    headingArray[headingArray.length-1] = 100; //trick for the color
+                                    headingArray[headingArray.length] = 100; //trick for the color meaning in bend
                                     if(bendDetection==0) {
                                         bendDetection=1;
+                                        if(tempHead>=0) bendDirection=1;
+                                        else bendDirection=-1; ///set the direction of the bend
                                         //window.alert("Bend start, perc="+(tempHead/segLength));
                                     }else{ 
                                         //window.alert("Bend Continue, perc="+(tempHead/segLength));
-                                        exitBend=2; //reset exit
+                                        if(((tempHead>=0)&&(bendDirection==1))||((tempHead<=0)&&(bendDirection==-1)))
+                                        {  
+                                            ///all good bend continues
+                                            exitLength=50;
+                                        }
+                                        else {
+                                            ///end of this bend///
+                                            exitLength-=segLength;
+                                        } 
                                     }
                                 }else{
                                     if(bendDetection==1){ 
-                                        if(exitBend){
-                                            exitBend--; //decrement
+                                        if(exitLength >= 0){
+                                            exitLength -= segLength;
                                             bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
                                             bendLengthBuffer[bendLengthBuffer.length] = segLength;
-                                            headingArray[headingArray.length-1] = 100; //trick for the color
+                                            headingArray[headingArray.length] = 100; //trick for the color
                                            // window.alert("Bend Continue, exit="+exitBend);
                                         }else{
                                             //end of Bend
                                             bendDetection =0;
+                                            bendDirection =0;//reset bend direction
+                                            var totDHead = 0;
+                                            window.alert("Exiting the bend n"+bendLengths.length+" exit length "+exitLength);
                                             for(s=0; s<bendLengthBuffer.length; s++){
                                                 bendLength += bendLengthBuffer[s];
+                                                totDHead += bendHeadBuffer[s];
                                             }
                                             bendLengths[bendLengths.length] = bendLength;
+                                            bendDHead[bendDHead.length]= totDHead;
                                             bendLength=0;
                                             bendsNumSeg++; //increment the number of detected bends in this segment
                                             //window.alert("Bend Detected, lenght="+bendLengths[bendLengths.length-1]);
@@ -259,9 +242,10 @@
                                             //clear bendBuffers scary javascript
                                             bendHeadBuffer = [];
                                             bendLengthBuffer = [];
-                                            exitBend = 2;
+                                            exitLength = 50;
+                                            headingArray[headingArray.length]= 0;
                                         }
-                                    }
+                                    }else  headingArray[headingArray.length]= 0;
                                 }
                             } 
                             prevHeading = heading;
@@ -273,21 +257,26 @@
                         myPosition = nextSegment[k];
                         //headingArray[headingArray.length] = heading;
                
-                        if(TotsegLength>=2000){
+                       /* if(TotsegLength>=2000){
                             markers[p] = new google.maps.Marker({
                               position: myPosition,
                               map: map,
                               title: 'T'+p
                             });
-                            var DHeadN = HeadVar/TotsegLength * 100;
                             totExcitement[p]= (bendsNumSeg/TotsegLength)
                                 *37500;
-                            contentStrings[p] = '<div id="content">'+'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+HeadVar.toFixed(2)+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+'</div>';
+                            contentStrings[p] = '<div id="content">'+'T'+p+' TotLenght ='+TotsegLength.toFixed(2)+'Number of bends'+bendsNumSeg+'</div>';
                            
+                            for(z=0;z < bendDHead.length; z++)
+                            {
+                                window.alert("Bend n="+z+" DHead="+bendDHead[z].toFixed(2)+" Length="+bendLengths[z]);
+                            }
                             p++;
-                            HeadVar = 0; //reset counters
+                            HeadVar = 0; //reset counters and statistics
                             TotsegLength = 0;
                             bendsNumSeg = 0;
+                            bendDHead = [];
+                            bendLengths = [];
                             ///create a new polyline////
                             polyline[p]= new google.maps.Polyline({
                             path: [],
@@ -297,16 +286,15 @@
                             });
                             polyline[p].getPath().push(nextSegment[k]);
                             //init new polyline where the previous ended.
-                        }
-                            /*markers[p] = new google.maps.Marker({
+                        }*/
+                            markers[p] = new google.maps.Marker({
                               position: myPosition,
                               map: map,
                               title: 'T'+p
                             });
-                            var DHeadN = HeadVar/TotsegLength * 100;
                             if(headingArray.length > 1) totExcitement[p]= headingArray[headingArray.length-1];
                             else totExcitement[p] = 0;
-                            contentStrings[p] = '<div id="content">'+'Leg '+i+' Segment '+j+' lenght ='+nextSegment.length+' VarHeading = '+totExcitement[p]+' TotLenght ='+TotsegLength.toFixed(2)+' Mark = '+DHeadN.toFixed(2)+'%'+'</div>';
+                            contentStrings[p] = '<div id="content">'+' Segment '+k+'lenght ='+segLength+' VarHeading = '+headingTemp+'</div>';
                            
                             p++;
                             HeadVar = 0; //reset counters
@@ -320,7 +308,7 @@
                             });
                             polyline[p].getPath().push(nextSegment[k]);
                             //init new polyline where the previous ended.
-                            */
+                            
 
                     }
                 }
@@ -328,6 +316,252 @@
 
             window.alert("Bends Detected="+bendLengths.length);
             window.alert("legs= "+totLegs+"steps= "+totSteps+"segments="+totSegs);
+            return myPosition;
+        }
+
+        function elaborateBbyB(map, legs, polyline, bounds,  markers, contentStrings, totExcitement){
+            var TotsegLength =0;
+            var HeadVar =0;
+            var p = 0;
+            var prevHeading =256;
+            var heading = 0;
+            var headingArray = [];
+            var prevSegment = 0;	
+            var bendsNumSeg = 0;
+            var bendDirection =0;
+            var bendDetection =0;
+            var exitMacroLength = 40;
+            var minBendRatio = 3;
+            var exitLength = exitMacroLength; //max lenght without variation of heading
+            var bendLengths = [];
+            var bendHeadBuffer= [];
+            var bendDHead= [];
+            var bendLengthBuffer= [];
+            var myPosition =0;
+            var bendLength =0;
+            var bendDirection=0;
+            var misDirectionFlag=0;
+
+            //debug vars//
+            var totLegs = legs.length;
+            var totSteps =0;
+            var totSegs =0;
+            
+           /* polyline[polyline.length]= new google.maps.Polyline({
+                path: [],
+                strokeColor: '#00FF00',
+                strokeWeight: 3,
+                map: map
+            });
+            */
+            totExcitement[totExcitement.length] = 0;
+        
+            var myWindow = window.open("", "MsgWindow", "width=1000, height=1000");
+
+            var segLength =0;
+            for (i=0;i<legs.length;i++) {
+                var steps = legs[i].steps;
+                for (j=0;j<steps.length;j++) {
+                    var nextSegment = steps[j].path;
+                    for (k=0;k<nextSegment.length;k++) {
+                        if(!((k==0)&&(i==0)&&(j==0))) { 
+                            heading = google.maps.geometry.spherical.computeHeading(prevSegment, nextSegment[k]);
+                            if(prevHeading!=256){
+                                var tempHead = heading-prevHeading;
+                                if(!tempHead) tempHead = 0;
+                                if(tempHead > 180) tempHead = 360-HeadVar;
+                                if(tempHead < -180) tempHead =
+                                    -360-HeadVar; //negative angle keep direction of turning
+                                HeadVar += tempHead;
+                                segLength = google.maps.geometry.spherical.computeDistanceBetween(prevSegment, nextSegment[k]);
+                                myWindow.document.write("<p> Segment = "+k+" DHead = "+(tempHead)+"Length="+segLength+"</p>");
+                                totSegs++;
+                                if((Math.abs(tempHead) >= minBendRatio) && (exitLength >= 0)){
+                                    bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
+                                    bendLengthBuffer[bendLengthBuffer.length] = segLength;
+                                    headingArray[headingArray.length] = 100; //trick for the color meaning in bend
+                                    if(bendDetection==0) {
+                                        bendDetection=1;
+                                        exitLength = exitMacroLength;
+
+                                        myWindow.document.write("<p> Start of new bend segn= "+k+"</p>");
+                                        if(tempHead>=0) bendDirection=1;
+                                        else bendDirection=-1; ///set the direction of the bend
+                                        ///create a new polyline////
+                                        polyline[polyline.length-1].getPath().push(nextSegment[k]);
+                                       // p++;
+                                        //totExcitement[totExcitement.length] = 0;
+                                        polyline[polyline.length]= new google.maps.Polyline({
+                                        path: [],
+                                        strokeColor: '#00FF00',
+                                        strokeWeight: 3,
+                                        map: map
+                                        });
+
+                                        totExcitement[totExcitement.length] = 0;
+                                        markers[markers.length] = new google.maps.Marker({
+                                        position: nextSegment[k],
+                                             map: map,
+                                            title: 'T'+(markers.lenght-1)
+                                        });
+                                        contentStrings[contentStrings.length] = '<div id="content">'+'No bends'+'Nsegs='+totSegs+'</div>';
+                                        TotsegLength = 0;
+                                        totSegs = 0;
+                                        HeadVar = 0; //reset counters
+
+                                       // polyline[p].getPath().push(nextSegment[k]);
+                                        //window.alert("Bend start, perc="+(tempHead/segLength));
+                                    }else{ 
+                                        //window.alert("Bend Continue, perc="+(tempHead/segLength));
+                                        if(((tempHead>=0)&&(bendDirection==1))||((tempHead<0)&&(bendDirection==-1)))
+                                        {  
+                                            ///all good bend continues
+                                            exitLength = exitMacroLength;
+                                        }
+                                        else {
+                                            ///end of this bend///
+                                            exitLength-=segLength;
+                                            myWindow.document.write("<p> Change of Direction in Bend remaining space= "+exitLength+" subtracted= "+segLength+"</p>");
+                                            ///we need to set a flag and before exiting evaluate if we considered the sign wrong.
+                                            misDirectionFlag=1;
+                                            //window.alert("Change of Direction in Bend remaining space= "+exitLength+" subtracted= "+segLength);
+                                        } 
+                                    }
+                                }else{
+                                    if(bendDetection==1){ 
+                                        if(exitLength >= 0){
+                                            exitLength -= segLength;
+                                            //window.alert("Straight tract exit Rem= "+exitLength+" subtracted= "+segLength);
+                                            myWindow.document.write("<p> Straight tract exit Rem= "+exitLength+" subtracted= "+segLength+"</p>");
+                                            bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
+                                            bendLengthBuffer[bendLengthBuffer.length] = segLength;
+                                            headingArray[headingArray.length] = 100; //trick for the color
+                                           // window.alert("Bend Continue, exit="+exitBend);
+                                        }else{
+                                            var end_of_bend=1;
+                                            if(misDirectionFlag)
+                                            {
+                                                misDirectionFlag =0;
+                                                var sum_direction=0;
+                                                for(z=0; z<bendHeadBuffer.length; z++)
+                                                {
+                                                    sum_direction += bendHeadBuffer[z];
+                                                }
+                                                if(((sum_direction >= 0) && (bendDirection < 0))||((sum_direction < 0)&&(bendDirection > 0))) 
+                                                {
+                                                    if(sum_direction >=0) bendDirection = 1;
+                                                    else bendDirection= -1;
+                                                    myWindow.document.write("<p> Mis-direction seg_no= "+k+"</p>");
+                                                    bendHeadBuffer[bendHeadBuffer.length] = tempHead; //this is for future calcs
+                                                    bendLengthBuffer[bendLengthBuffer.length] = segLength;
+                                                    headingArray[headingArray.length] = 100; //trick for the color
+                                                    end_of_bend=0;
+                                                    exitLength = exitMacroLength;
+                                                }
+                                            }
+                                            if(end_of_bend)
+                                            {
+                                                //end of Bend
+
+                                                bendDetection =0;
+                                                bendDirection =0;//reset bend direction
+                                                var totDHead = 0;
+                                                for(s=0; s<bendLengthBuffer.length; s++){
+                                                    bendLength += bendLengthBuffer[s];
+                                                    totDHead += bendHeadBuffer[s];
+                                                }
+                                                bendLengths[bendLengths.length] = bendLength;
+                                                bendDHead[bendDHead.length]= totDHead;
+                                                bendLength=0;
+                                                bendsNumSeg++; //increment the number of detected bends in this segment
+                                                //window.alert("Bend Detected, lenght="+bendLengths[bendLengths.length-1]);
+                                                 myWindow.document.write("<p> End Of Bend segNo= "+k+"</p>");
+
+                                                //clear bendBuffers scary javascript
+                                                bendHeadBuffer = [];
+                                                bendLengthBuffer = [];
+                                                exitLength = exitMacroLength;
+                                                headingArray[headingArray.length]= 0;
+                                                markers[markers.length] = new google.maps.Marker({
+                                                  position: nextSegment[k],
+                                                  map: map,
+                                                  title: 'T'+(markers.lenght-1)
+                                                });
+                                                totExcitement[totExcitement.length-1] = (Math.abs(bendDHead[bendDHead.length-1])/bendLengths[bendLengths.length-1]) * 100 ;
+                                                contentStrings[contentStrings.length] = '<div id="content">'+'bend='+(markers.length-1)+' Length='+bendLengths[bendLengths.length-1]+' Var Ang='+bendDHead[bendDHead.length-1]+'Nsegs='+totSegs+'</div>';
+                                                polyline[polyline.length-1].getPath().push(nextSegment[k]);
+                                               // p++;
+                                                HeadVar = 0; //reset counters
+                                                TotsegLength = 0;
+                                                totSegs = 0;
+                                                polyline[polyline.length]= new google.maps.Polyline({
+                                                    path: [],
+                                                    strokeColor: '#00FF00',
+                                                    strokeWeight: 3,
+                                                    map: map
+                                                });
+                                                totExcitement[totExcitement.length] = 0;
+                                                //initialize total excitement
+                                            }
+                                        }
+                                    }else{
+                                        //boring part no bends
+
+                                            myWindow.document.write("<p> No bends No detect seg No= "+k+"</p>");
+                                        
+                                    }
+
+                                }
+                            } 
+                            prevHeading = heading;
+                        } 
+                        TotsegLength+=segLength;
+                        prevSegment = nextSegment[k];
+                        polyline[polyline.length-1].getPath().push(nextSegment[k]);
+                        bounds.extend(nextSegment[k]);
+                        myPosition = nextSegment[k];
+                        //window.alert("Seg = "+k+"Heading= "+heading);
+                        //headingArray[headingArray.length] = heading;
+               
+                       /* if(TotsegLength>=2000){
+                            markers[p] = new google.maps.Marker({
+                              position: myPosition,
+                              map: map,
+                              title: 'T'+p
+                            });
+                            totExcitement[p]= (bendsNumSeg/TotsegLength)
+                                *37500;
+                            contentStrings[p] = '<div id="content">'+'T'+p+' TotLenght ='+TotsegLength.toFixed(2)+'Number of bends'+bendsNumSeg+'</div>';
+                           
+                            for(z=0;z < bendDHead.length; z++)
+                            {
+                                window.alert("Bend n="+z+" DHead="+bendDHead[z].toFixed(2)+" Length="+bendLengths[z]);
+                            }
+                            p++;
+                            HeadVar = 0; //reset counters and statistics
+                            TotsegLength = 0;
+                            bendsNumSeg = 0;
+                            bendDHead = [];
+                            bendLengths = [];
+                            ///create a new polyline////
+                            polyline[p]= new google.maps.Polyline({
+                            path: [],
+                            strokeColor: '#00FF00',
+                            strokeWeight: 3,
+                            map: map
+                            });
+                            polyline[p].getPath().push(nextSegment[k]);
+                            //init new polyline where the previous ended.
+                        }*/
+                                                       //init new polyline where the previous ended.
+                            
+
+                    }
+                }
+            }
+
+            window.alert("Bends Detected="+bendLengths.length);
+           // window.alert("legs= "+totLegs+"steps= "+totSteps+"segments="+totSegs);
             return myPosition;
         }
         //function to assign different colors to each part of the
@@ -408,12 +642,14 @@
        <!-- <input id="address0" type="textbox" value="Al. Marszałka Józefa Piłsudskiego 50 Marki, Poland">
         <input id="address1" type="textbox" value="Al. Marszałka Józefa
         Piłsudskiego 24 Marki, Poland">-->
-        <input id="address0" type="textbox" value="Pod Skałką 15 34-443 Sromowce Wyżne, Poland">
+       <input id="address0" type="textbox" value="49.422011, 20.344653">
+           <!-- "Pod Skałką 15 34-443 Sromowce Wyżne, Poland"> -->
         <input id="address1" type="textbox" value="49.434514, 20.346163"> 
 
         <select id="algorythm">
             <option value="0">Alg-1</option>
             <option value="1">Alg-2</option>
+            <option value="2">Alg-3</option>
         </select>
         <input type="button" value="Evaluate" onclick="evaluatePath()">
         <input type="button" value="Reset" onclick="initialize()">
