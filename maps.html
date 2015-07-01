@@ -744,8 +744,8 @@
            <!--  <input id="address1" type="textbox" value="49.434514, 20.346163"> -->
          <input id="address0" type="textbox" value="Stelvio Pass">
          <input id="address1" type="textbox" value="46.529392, 10.450055">
-         <div id="waypoint"> Entry 1<br><input type="text" name="my_waypoints[]"><input type="button" value="Remove" name="remove" onclick="remove_div(this, counter)"></div>
-         <input type="button" value="Add waypoint" onClick="addInput('waypoint');">
+         <!--<div > Entry 1<br><input type="text" name="my_waypoints[]"><input type="button" value="Remove" name="remove" onclick="remove_div(this, counter)"></div> -->
+         <input type="button" value="Add waypoint" onClick="addInput('panel');">
 
         <select id="algorythm">
             <option value="0">Alg-1</option>
@@ -784,22 +784,24 @@
             chart.draw(data, options);
         }
         var counter = 1;
-        var limit = 3;
+        var limit = 4;
         function addInput(divName){
-            if (counter == limit)  {
+            if (counter >= limit)  {
                 alert("You have reached the limit of adding " + counter + " inputs");
             } else {
                 var newdiv = document.createElement('div');
-                newdiv.innerHTML = "Entry " + (counter + 1) + " <br><input type='text' name='my_waypoints[]'>"+"<input type='button' value='Remove' name='remove' onclick='remove_div(this,counter)'>";
+                newdiv.innerHTML = "Waypoint " + " <br><input type='text' name='my_waypoints[]'>"+"<input type='button' value='Remove' name='remove' onclick='remove_div(this)'>";
+		newdiv.id="waypoint"+counter;
                 document.getElementById(divName).appendChild(newdiv);
                 counter++;
             }
         }
         function remove_div(element){
-                 var parent = element.parentNode;
-                  window.alert("parent id ="+parent.id+" element id= "+element.id);
-                   var list = document.getElementById(parent.id);
-                       list.parentNode.removeChild(parent.id);
+                 var waypoint = element.parentNode;
+		 var parent = waypoint.parentNode;
+                 window.alert("parent id ="+parent.id+" element id= "+waypoint.id+ " counter ="+counter);
+		 parent.removeChild(waypoint);
+		 counter--;
         }
       </script>
       <div id="chart_div" style="position: absolute; z-index: 10;
