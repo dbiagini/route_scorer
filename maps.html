@@ -402,7 +402,7 @@
                 map: map
             });
             */
-            totExcitement[totExcitement.length] = 0;
+	    totExcitement[totExcitement.length] = 0;
         
             var myWindow = window.open("", "MsgWindow", "width=1000, height=1000");
 
@@ -606,6 +606,49 @@
                     }
                 }
             }
+		if(bendDetection==1){
+			//end of Bend that didn't close
+
+			bendDetection =0;
+			bendDirection =0;//reset bend direction
+			var totDHead = 0;
+			for(s=0; s<bendLengthBuffer.length; s++){
+			    bendLength += bendLengthBuffer[s];
+			    totDHead += bendHeadBuffer[s];
+			}
+			bendLengths[bendLengths.length] = bendLength;
+			bendDHead[bendDHead.length]= totDHead;
+			bendLength=0;
+			bendsNumSeg++; //increment the number of detected bends in this segment
+			//window.alert("Bend Detected, lenght="+bendLengths[bendLengths.length-1]);
+			 myWindow.document.write("<p> End Of Bend segNo= "+k+"</p>");
+
+			//clear bendBuffers scary javascript
+			bendHeadBuffer = [];
+			bendLengthBuffer = [];
+			exitLength = exitMacroLength;
+			headingArray[headingArray.length]= 0;
+			markers[markers.length] = new google.maps.Marker({
+			  position: myPosition,
+			  map: map,
+			  title: 'T'+(markers.lenght-1)
+			});
+			totExcitement[totExcitement.length-1] = (Math.abs(bendDHead[bendDHead.length-1])/bendLengths[bendLengths.length-1]) * 100 ;
+			contentStrings[contentStrings.length] = '<div id="content">'+'bend='+(markers.length-1)+' Length='+bendLengths[bendLengths.length-1]+' Var Ang='+bendDHead[bendDHead.length-1]+'Nsegs='+totSegs+'</div>';
+			polyline[polyline.length-1].getPath().push(myPosition);
+		       // p++;
+			HeadVar = 0; //reset counters
+			TotsegLength = 0;
+			totSegs = 0;
+			polyline[polyline.length]= new google.maps.Polyline({
+			    path: [],
+			    strokeColor: '#00FF00',
+			    strokeWeight: 3,
+			    map: map
+			});
+			totExcitement[totExcitement.length] = 0;
+			//initialize total excitement
+		    }
 
             window.alert("Bends Detected="+bendLengths.length);
            // window.alert("legs= "+totLegs+"steps= "+totSteps+"segments="+totSegs);
