@@ -4,8 +4,9 @@
         <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
         <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
         <title>Google Maps API (v3): polyline from directions</title>
-        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-        <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+        <!--<script type="text/javascript" src="https://www.google.com/jsapi"></script>-->
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9g1kwaIHeq5lK9x34_jMm_nfdPhcG0mw" type="text/javascript"></script>
         <style type="text/css">
 		  #legend {
 		    background: white;
@@ -23,7 +24,7 @@
         function initialize() {
             var center = new google.maps.LatLng(52.229676, 21.012229);
             geocoder = new google.maps.Geocoder();
-            directionsService = new google.maps.DirectionsService(); 
+            //directionsService = new google.maps.DirectionsService(); 
               map = new google.maps.Map(document.getElementById('map_canvas'), {
                 center: center,
                 zoom: 13,
@@ -130,6 +131,8 @@
 
                     //window.alert("Table rows= "+data.getNumberOfRows());
                     drawChart();
+                } else {
+                    console.log("direction issue"+status);
                 }
             });
         }
